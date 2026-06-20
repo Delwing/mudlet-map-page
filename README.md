@@ -64,10 +64,12 @@ Use this when you want the generated site as a folder and control deployment you
 | `reader-version` | no | `latest` | `mudlet-map-binary-reader` version used to decode the `.dat` at build time. |
 | `output-dir` | no | `_site` | Folder the generated site is written to. |
 | `title` | no | `Map` | Page title (`MAP_CONFIG.title` and the document `<title>`). |
-| `logo` | no | — | Logo image URL/path (`MAP_CONFIG.logo`). |
+| `logo` | no | — | Logo — a URL, or a repo file (copied in). Sets `MAP_CONFIG.logo`. See [Referencing repo files](#referencing-files-from-your-repo). |
+| `npc-url` | no | — | NPC data file — a URL, or a repo file (copied in). Sets `MAP_CONFIG.npcUrl`. |
+| `assets` | no | — | Extra files/dirs from your checkout to copy into the site, one per line. |
 | `lang` | no | `en` | Document language and default UI language. |
 | `theme` | no | `dark` | Bootstrap theme (`data-bs-theme`): `dark` or `light`. |
-| `favicon` | no | — | Path to a `favicon.ico` in your checkout; copied into the site. |
+| `favicon` | no | — | A URL, or a repo file copied in as `/favicon.ico`. |
 | `credits-author` | no | — | Help-modal credits: author name. |
 | `credits-github-url` | no | — | Help-modal credits: GitHub URL. |
 | `credits-remark` | no | — | Help-modal credits: remark (HTML allowed). |
@@ -75,6 +77,38 @@ Use this when you want the generated site as a folder and control deployment you
 
 > The reusable workflow exposes the same inputs (`with:`), except `output-dir`, which it
 > fixes to `_site` for the Pages upload.
+
+## Referencing files from your repo
+
+The published site only contains what the action puts in `output-dir` (`index.html`,
+`data/`, plus anything copied in). So a `MAP_CONFIG` value pointing at a file in your repo
+must be **copied into the site**, or it will 404 once deployed.
+
+`logo`, `npc-url`, and `favicon` do this automatically: if the value is a **URL** it's used
+as-is; if it's a **path that exists in your checkout** it's copied into the site (at the same
+relative path; `favicon` becomes `/favicon.ico`) and referenced there.
+
+```yaml
+with:
+  map-file: maps/map.dat
+  logo: images/logo.png          # copied → site/images/logo.png, MAP_CONFIG.logo = images/logo.png
+  npc-url: data/npc.json         # copied → site/data/npc.json,    MAP_CONFIG.npcUrl = data/npc.json
+  favicon: assets/favicon.ico    # copied → site/favicon.ico
+```
+
+For any other repo files (e.g. images referenced from NPC tooltips, or files wired through
+`extra-config`), list them in `assets` — paths are preserved:
+
+```yaml
+with:
+  assets: |
+    images/icons/
+    data/labels.json
+  extra-config: '{ "labelsUrl": "data/labels.json" }'
+```
+
+> Heads up: the bundle's `npcUrl` (and the version-history endpoints) default to the Arkadia
+> deployment when unset. Pass `npc-url` to point at your own NPC data.
 
 ## What gets generated
 

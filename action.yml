@@ -24,7 +24,13 @@ inputs:
     description: "Page title (MAP_CONFIG.title and the document <title>)."
     required: false
   logo:
-    description: "Logo image URL or path (MAP_CONFIG.logo)."
+    description: "Logo image — a URL, or a path to a file in your checkout (copied into the site). Sets MAP_CONFIG.logo."
+    required: false
+  npc-url:
+    description: "NPC data file — a URL, or a path to a file in your checkout (copied into the site). Sets MAP_CONFIG.npcUrl."
+    required: false
+  assets:
+    description: "Extra files/dirs from your checkout to copy into the site, one per line (e.g. images referenced by extra-config). Paths are preserved."
     required: false
   lang:
     description: "Document language and default UI language."
@@ -64,6 +70,8 @@ runs:
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
         INPUT_TITLE: ${{ inputs.title }}
         INPUT_LOGO: ${{ inputs.logo }}
+        INPUT_NPC_URL: ${{ inputs.npc-url }}
+        INPUT_ASSETS: ${{ inputs.assets }}
         INPUT_LANG: ${{ inputs.lang }}
         INPUT_THEME: ${{ inputs.theme }}
         INPUT_FAVICON: ${{ inputs.favicon }}

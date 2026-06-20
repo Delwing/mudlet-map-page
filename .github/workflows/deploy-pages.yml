@@ -30,6 +30,12 @@ on:
       logo:
         required: false
         type: string
+      npc-url:
+        required: false
+        type: string
+      assets:
+        required: false
+        type: string
       lang:
         required: false
         type: string
@@ -78,6 +84,8 @@ jobs:
           output-dir: _site
           title: ${{ inputs.title }}
           logo: ${{ inputs.logo }}
+          npc-url: ${{ inputs.npc-url }}
+          assets: ${{ inputs.assets }}
           lang: ${{ inputs.lang }}
           theme: ${{ inputs.theme }}
           favicon: ${{ inputs.favicon }}
