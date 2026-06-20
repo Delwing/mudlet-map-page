@@ -107,8 +107,8 @@ with:
   extra-config: '{ "labelsUrl": "data/labels.json" }'
 ```
 
-> Heads up: the bundle's `npcUrl` (and the version-history endpoints) default to the Arkadia
-> deployment when unset. Pass `npc-url` to point at your own NPC data.
+> NPC search is opt-in: without `npc-url`, NPCs simply aren't searchable (room-id search still
+> works). The bundle ships no default endpoints, so your site never points at someone else's data.
 
 ## What gets generated
 
