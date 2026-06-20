@@ -68,7 +68,6 @@ Use this when you want the generated site as a folder and control deployment you
 | `npc-url` | no | — | NPC data file — a URL, or a repo file (copied in). Sets `MAP_CONFIG.npcUrl`. |
 | `assets` | no | — | Extra files/dirs from your checkout to copy into the site, one per line. |
 | `lang` | no | `en` | Document language and default UI language. |
-| `theme` | no | `dark` | Bootstrap theme (`data-bs-theme`): `dark` or `light`. |
 | `favicon` | no | — | A URL, or a repo file copied in as `/favicon.ico`. |
 | `credits-author` | no | — | Help-modal credits: author name. |
 | `credits-github-url` | no | — | Help-modal credits: GitHub URL. |

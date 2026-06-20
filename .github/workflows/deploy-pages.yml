@@ -40,10 +40,6 @@ on:
         required: false
         type: string
         default: "en"
-      theme:
-        required: false
-        type: string
-        default: "dark"
       favicon:
         required: false
         type: string
@@ -87,7 +83,6 @@ jobs:
           npc-url: ${{ inputs.npc-url }}
           assets: ${{ inputs.assets }}
           lang: ${{ inputs.lang }}
-          theme: ${{ inputs.theme }}
           favicon: ${{ inputs.favicon }}
           credits-author: ${{ inputs.credits-author }}
           credits-github-url: ${{ inputs.credits-github-url }}

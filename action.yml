@@ -36,10 +36,6 @@ inputs:
     description: "Document language and default UI language."
     required: false
     default: "en"
-  theme:
-    description: 'Bootstrap theme (data-bs-theme): "dark" or "light".'
-    required: false
-    default: "dark"
   favicon:
     description: "Path to a favicon.ico in your checkout; copied into the site."
     required: false
@@ -73,7 +69,6 @@ runs:
         INPUT_NPC_URL: ${{ inputs.npc-url }}
         INPUT_ASSETS: ${{ inputs.assets }}
         INPUT_LANG: ${{ inputs.lang }}
-        INPUT_THEME: ${{ inputs.theme }}
         INPUT_FAVICON: ${{ inputs.favicon }}
         INPUT_CREDITS_AUTHOR: ${{ inputs.credits-author }}
         INPUT_CREDITS_GITHUB_URL: ${{ inputs.credits-github-url }}

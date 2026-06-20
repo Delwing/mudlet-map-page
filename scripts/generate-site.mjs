@@ -24,9 +24,9 @@ if (!mapFile) throw new Error("map-file input is required");
 const outputDir = input("OUTPUT_DIR", "_site");
 const version = input("VERSION", "1");
 const lang = input("LANG", "en");
-const theme = input("THEME", "dark");
 const title = input("TITLE");
 const logo = input("LOGO");
+// Theme is fixed to dark for now — the bundle has no real light-theme support to expose.
 const npc = input("NPC_URL");
 const favicon = input("FAVICON");
 const assets = input("ASSETS");
@@ -100,7 +100,7 @@ const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;
 const configJson = JSON.stringify(config, null, 4).replace(/</g, "\\u003c");
 
 const html = `<!DOCTYPE html>
-<html lang="${escapeHtml(lang)}" data-bs-theme="${escapeHtml(theme)}">
+<html lang="${escapeHtml(lang)}" data-bs-theme="dark">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
