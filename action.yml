@@ -1,0 +1,74 @@
+name: "Mudlet Map Browser — build Pages site"
+description: "Decode a Mudlet .dat map and generate a static map-browser site (index.html + JSON exports) ready for GitHub Pages."
+branding:
+  icon: map-pin
+  color: blue
+
+inputs:
+  map-file:
+    description: "Path to the Mudlet binary map (.dat) in your checkout."
+    required: true
+  version:
+    description: 'mudlet-map-browser-script version for the CDN bundle. Accepts a jsDelivr version range: "1" (latest 1.x), "1.2" (latest 1.2.x) or an exact "1.2.3".'
+    required: false
+    default: "1"
+  reader-version:
+    description: "mudlet-map-binary-reader version used to decode the .dat at build time."
+    required: false
+    default: "latest"
+  output-dir:
+    description: "Directory to write the generated site into."
+    required: false
+    default: "_site"
+  title:
+    description: "Page title (MAP_CONFIG.title and the document <title>)."
+    required: false
+  logo:
+    description: "Logo image URL or path (MAP_CONFIG.logo)."
+    required: false
+  lang:
+    description: "Document language and default UI language."
+    required: false
+    default: "en"
+  theme:
+    description: 'Bootstrap theme (data-bs-theme): "dark" or "light".'
+    required: false
+    default: "dark"
+  favicon:
+    description: "Path to a favicon.ico in your checkout; copied into the site."
+    required: false
+  credits-author:
+    description: "Help-modal credits: author name."
+    required: false
+  credits-github-url:
+    description: "Help-modal credits: GitHub URL."
+    required: false
+  credits-remark:
+    description: "Help-modal credits: remark (HTML allowed)."
+    required: false
+  extra-config:
+    description: "Raw JSON object merged into MAP_CONFIG last (escape hatch for translations, languages, …)."
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Install map decoder
+      shell: bash
+      run: npm install --prefix "$GITHUB_ACTION_PATH" --no-save "mudlet-map-binary-reader@${{ inputs.reader-version }}"
+    - name: Generate site
+      shell: bash
+      env:
+        INPUT_MAP_FILE: ${{ inputs.map-file }}
+        INPUT_VERSION: ${{ inputs.version }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_TITLE: ${{ inputs.title }}
+        INPUT_LOGO: ${{ inputs.logo }}
+        INPUT_LANG: ${{ inputs.lang }}
+        INPUT_THEME: ${{ inputs.theme }}
+        INPUT_FAVICON: ${{ inputs.favicon }}
+        INPUT_CREDITS_AUTHOR: ${{ inputs.credits-author }}
+        INPUT_CREDITS_GITHUB_URL: ${{ inputs.credits-github-url }}
+        INPUT_CREDITS_REMARK: ${{ inputs.credits-remark }}
+        INPUT_EXTRA_CONFIG: ${{ inputs.extra-config }}
+      run: node "$GITHUB_ACTION_PATH/scripts/generate-site.mjs"

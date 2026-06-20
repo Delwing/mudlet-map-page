@@ -1,0 +1,92 @@
+name: Deploy map to Pages
+
+# Reusable workflow: turn a Mudlet .dat into a published GitHub Pages site.
+# Call it from your own repo (which holds the .dat):
+#
+#   jobs:
+#     pages:
+#       uses: Delwing/mudlet-map-page/.github/workflows/deploy-pages.yml@v1
+#       with:
+#         map-file: maps/map.dat
+#         title: My MUD Map
+#         version: "1"          # jsDelivr range: "1" = latest 1.x, "1.2", or exact "1.2.3"
+on:
+  workflow_call:
+    inputs:
+      map-file:
+        required: true
+        type: string
+      version:
+        required: false
+        type: string
+        default: "1"
+      reader-version:
+        required: false
+        type: string
+        default: "latest"
+      title:
+        required: false
+        type: string
+      logo:
+        required: false
+        type: string
+      lang:
+        required: false
+        type: string
+        default: "en"
+      theme:
+        required: false
+        type: string
+        default: "dark"
+      favicon:
+        required: false
+        type: string
+      credits-author:
+        required: false
+        type: string
+      credits-github-url:
+        required: false
+        type: string
+      credits-remark:
+        required: false
+        type: string
+      extra-config:
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - uses: Delwing/mudlet-map-page@v1
+        with:
+          map-file: ${{ inputs.map-file }}
+          version: ${{ inputs.version }}
+          reader-version: ${{ inputs.reader-version }}
+          output-dir: _site
+          title: ${{ inputs.title }}
+          logo: ${{ inputs.logo }}
+          lang: ${{ inputs.lang }}
+          theme: ${{ inputs.theme }}
+          favicon: ${{ inputs.favicon }}
+          credits-author: ${{ inputs.credits-author }}
+          credits-github-url: ${{ inputs.credits-github-url }}
+          credits-remark: ${{ inputs.credits-remark }}
+          extra-config: ${{ inputs.extra-config }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

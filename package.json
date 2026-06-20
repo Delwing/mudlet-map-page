@@ -1,0 +1,11 @@
+{
+    "name": "mudlet-map-page",
+    "private": true,
+    "type": "module",
+    "description": "GitHub Action: build a static Mudlet map-browser site (GitHub Pages) from a .dat file.",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Delwing/mudlet-map-page.git"
+    }
+}
