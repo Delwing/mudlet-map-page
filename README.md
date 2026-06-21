@@ -24,6 +24,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   pages:
     uses: Delwing/mudlet-map-page/.github/workflows/deploy-pages.yml@v1
@@ -35,8 +40,11 @@ jobs:
 Then enable Pages once: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 On the next push the workflow publishes the site and prints its URL in the run summary.
 
-The reusable workflow already requests the permissions Pages deployment needs
-(`pages: write`, `id-token: write`), so you don't set them in your caller.
+The `permissions` block is required in **your caller**. A called (reusable) workflow can't be
+granted more than the caller's `GITHUB_TOKEN` holds, and `id-token: write` (needed for the Pages
+OIDC deploy) is never granted by default — so the reusable workflow can't request it on your
+behalf. Without this block the run fails at startup on repos whose default workflow permissions
+are read-only (the current GitHub default).
 
 ## Composite action (build only)
 
@@ -141,6 +149,11 @@ builds.
 ## Full example
 
 ```yaml
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   pages:
     uses: Delwing/mudlet-map-page/.github/workflows/deploy-pages.yml@v1
