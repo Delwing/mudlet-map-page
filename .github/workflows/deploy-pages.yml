@@ -76,7 +76,7 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - uses: Delwing/mudlet-map-page@v1
+      - uses: Delwing/mudlet-map-page@master
         with:
           map-file: ${{ inputs.map-file }}
           version: ${{ inputs.version }}
