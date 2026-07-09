@@ -1,0 +1,61 @@
+name: Release and update floating version tags
+
+# When a release tag like v1.2.3 is pushed:
+#   1. Create a GitHub Release for it (with auto-generated notes), so it
+#      surfaces as a new version on the GitHub Marketplace listing once the
+#      action has been opted in there (a one-time manual step).
+#   2. Move the floating major (v1) and major.minor (v1.2) tags to point at
+#      it, so consumers can pin to `@v1` or `@v1.2` and track the latest
+#      matching release.
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Parse and validate tag
+        id: parse
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Skipping non-release tag: $TAG"
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "valid=true" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "major=${TAG%%.*}" >> "$GITHUB_OUTPUT"
+          echo "minor=${TAG%.*}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        if: steps.parse.outputs.valid == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.parse.outputs.tag }}" \
+            --title "${{ steps.parse.outputs.tag }}" \
+            --generate-notes
+
+      - name: Move major and minor tags to this release
+        if: steps.parse.outputs.valid == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          for FLOATING_TAG in "${{ steps.parse.outputs.major }}" "${{ steps.parse.outputs.minor }}"; do
+            git tag -fa "$FLOATING_TAG" -m "Update $FLOATING_TAG to ${{ steps.parse.outputs.tag }}"
+            git push origin "refs/tags/$FLOATING_TAG" --force
+          done
