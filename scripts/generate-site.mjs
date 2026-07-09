@@ -2,16 +2,18 @@
 //
 // Run by the composite action (action.yml). Inputs arrive as INPUT_* env vars.
 // Two outputs:
-//   1. <output>/data/mapExport.json + colors.json — the .dat decoded offline, so
-//      visitors load plain JSON (no in-browser binary decode).
+//   1. <output>/data/ — either the .dat decoded offline to mapExport.json + colors.json
+//      ("prebuilt" mode, so visitors load plain JSON with no in-browser binary decode),
+//      or the raw .dat copied through as-is ("direct" mode, decoded in-browser instead —
+//      smaller download, no build-time decode, but visitors pay the decode cost).
+//      "auto" (default) picks direct once the map's room count passes a threshold.
 //   2. <output>/index.html — the host shell with MAP_CONFIG + CDN <script>/<link>.
 //
 // Path-valued inputs (logo, npc-url, favicon) and the `assets` list may reference
 // files that already live in the caller's repo: a local path is copied into the
 // site at the same relative path and referenced there; a URL is used verbatim.
 import {readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, cpSync} from "node:fs";
-import {resolve, join, dirname} from "node:path";
-import {MudletMapReader} from "mudlet-map-binary-reader";
+import {resolve, join, dirname, basename} from "node:path";
 
 const input = (name, def = "") => {
     const v = process.env[`INPUT_${name}`];
@@ -23,6 +25,9 @@ if (!mapFile) throw new Error("map-file input is required");
 
 const outputDir = input("OUTPUT_DIR", "_site");
 const version = input("VERSION", "1");
+const readerVersion = input("READER_VERSION", "latest");
+const modeInput = input("MODE", "auto");
+const directRoomThreshold = parseInt(input("DIRECT_ROOM_THRESHOLD", "50000"), 10);
 const lang = input("LANG", "en");
 const theme = input("THEME", "dark");
 const title = input("TITLE");
@@ -56,17 +61,73 @@ function asset(value) {
     return value;
 }
 
-// --- 1. Decode .dat → the two JSON arrays the bundle loads via mapDataUrl + colorsUrl.
-// MudletMapReader.export() returns exactly { mapData, colors }.
+// --- 1. Decide "prebuilt" (decode .dat → JSON now) vs "direct" (ship the .dat, decode
+// in-browser), then produce the data files and the mapUrl/mapDataUrl+colorsUrl config.
+if (!["auto", "prebuilt", "direct"].includes(modeInput)) {
+    throw new Error(`mode must be "auto", "prebuilt", or "direct" — got "${modeInput}"`);
+}
+
 const dataDir = join(outputDir, "data");
 mkdirSync(dataDir, {recursive: true});
 const bytes = new Uint8Array(readFileSync(resolve(mapFile)));
-const {mapData, colors} = MudletMapReader.export(MudletMapReader.readBuffer(bytes));
-writeFileSync(join(dataDir, "mapExport.json"), JSON.stringify(mapData));
-writeFileSync(join(dataDir, "colors.json"), JSON.stringify(colors));
+
+// Cheap room count: streamRooms() decodes the header (which lists each area's room
+// ids) before it ever touches a room body, so aborting from onHeader gives the total
+// room count without materialising the full map — critical for very large .dat files,
+// which readBuffer()'s full decode may not even be able to hold in memory.
+class HeaderRead extends Error {
+}
+
+function countRoomsFromHeader(MudletMapReader) {
+    let count;
+    try {
+        MudletMapReader.streamRooms(bytes, () => {
+        }, (header) => {
+            count = Object.values(header.areas).reduce((sum, area) => sum + area.rooms.length, 0);
+            throw new HeaderRead();
+        });
+    } catch (e) {
+        if (!(e instanceof HeaderRead)) throw e;
+    }
+    return count;
+}
+
+let mode = modeInput;
+let MudletMapReader, roomCount;
+if (mode !== "direct") ({MudletMapReader} = await import("mudlet-map-binary-reader"));
+if (mode === "auto") {
+    roomCount = countRoomsFromHeader(MudletMapReader);
+    mode = roomCount > directRoomThreshold ? "direct" : "prebuilt";
+}
+
+if (mode === "direct") {
+    // Bundle versions before 1.0.0 predate mapUrl (in-browser .dat decode) support.
+    const versionMajor = parseInt(version.split(".")[0], 10);
+    if (!Number.isNaN(versionMajor) && versionMajor < 1) {
+        console.log(`::warning::mode is "direct" but version "${version}" resolves to a pre-1.0 mudlet-map-browser-script range, which predates mapUrl (in-browser .dat) support.`);
+    }
+    if (readerVersion !== "latest") {
+        console.log(`::warning::reader-version "${readerVersion}" has no effect in direct mode — the .dat is decoded in-browser by the bundle's built-in mudlet-map-binary-reader instead.`);
+    }
+} else if (roomCount !== undefined) {
+    console.log(`mudlet-map-page: ${roomCount} rooms (threshold ${directRoomThreshold}) — using prebuilt mode.`);
+}
+
+const dataConfig = {};
+if (mode === "direct") {
+    const datDest = join(dataDir, basename(resolve(mapFile)));
+    copyFileSync(resolve(mapFile), datDest);
+    dataConfig.mapUrl = join("data", basename(resolve(mapFile))).replace(/\\/g, "/");
+} else {
+    const {mapData, colors} = MudletMapReader.export(MudletMapReader.readBuffer(bytes));
+    writeFileSync(join(dataDir, "mapExport.json"), JSON.stringify(mapData));
+    writeFileSync(join(dataDir, "colors.json"), JSON.stringify(colors));
+    dataConfig.mapDataUrl = "data/mapExport.json";
+    dataConfig.colorsUrl = "data/colors.json";
+}
 
 // --- 2. Assemble MAP_CONFIG from the inputs (only set what was provided).
-const config = {mapDataUrl: "data/mapExport.json", colorsUrl: "data/colors.json"};
+const config = {...dataConfig};
 if (title) config.title = title;
 if (logo) config.logo = asset(logo);
 if (npc) config.npcUrl = asset(npc);
@@ -123,4 +184,4 @@ const html = `<!DOCTYPE html>
 `;
 writeFileSync(join(outputDir, "index.html"), html);
 
-console.log(`Generated ${outputDir}/ from ${mapFile} (bundle @${version}).`);
+console.log(`Generated ${outputDir}/ from ${mapFile} (bundle @${version}, ${mode} mode).`);

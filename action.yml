@@ -13,9 +13,21 @@ inputs:
     required: false
     default: "1"
   reader-version:
-    description: "mudlet-map-binary-reader version used to decode the .dat at build time."
+    description: "mudlet-map-binary-reader version used to decode the .dat at build time. No effect in direct mode (mode: direct)."
     required: false
     default: "latest"
+  mode:
+    description: >-
+      How map data is shipped to the browser: "prebuilt" decodes the .dat to JSON at build time
+      (mapDataUrl + colorsUrl); "direct" copies the raw .dat and loads it in-browser (mapUrl) —
+      no build-time decode; "auto" picks "direct" when the map's room count exceeds
+      direct-room-threshold, else "prebuilt".
+    required: false
+    default: "auto"
+  direct-room-threshold:
+    description: 'Room count above which "auto" mode switches to "direct". Ignored when mode is "prebuilt" or "direct".'
+    required: false
+    default: "50000"
   output-dir:
     description: "Directory to write the generated site into."
     required: false
@@ -60,6 +72,7 @@ runs:
   using: composite
   steps:
     - name: Install map decoder
+      if: inputs.mode != 'direct'
       shell: bash
       run: npm install --prefix "$GITHUB_ACTION_PATH" --no-save "mudlet-map-binary-reader@${{ inputs.reader-version }}"
     - name: Generate site
@@ -67,6 +80,9 @@ runs:
       env:
         INPUT_MAP_FILE: ${{ inputs.map-file }}
         INPUT_VERSION: ${{ inputs.version }}
+        INPUT_READER_VERSION: ${{ inputs.reader-version }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_DIRECT_ROOM_THRESHOLD: ${{ inputs.direct-room-threshold }}
         INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
         INPUT_TITLE: ${{ inputs.title }}
         INPUT_LOGO: ${{ inputs.logo }}

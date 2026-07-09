@@ -69,7 +69,9 @@ Use this when you want the generated site as a folder and control deployment you
 |-------|----------|---------|-------------|
 | `map-file` | **yes** | — | Path to the Mudlet `.dat` in your checkout. |
 | `version` | no | `1` | Bundle version for the CDN. A jsDelivr range — see [Version pinning](#version-pinning). |
-| `reader-version` | no | `latest` | `mudlet-map-binary-reader` version used to decode the `.dat` at build time. |
+| `reader-version` | no | `latest` | `mudlet-map-binary-reader` version used to decode the `.dat` at build time. No effect in `direct` mode. |
+| `mode` | no | `auto` | `prebuilt`, `direct`, or `auto` — see [Loading modes](#loading-modes). |
+| `direct-room-threshold` | no | `50000` | Room count above which `auto` mode switches to `direct`. Ignored unless `mode` is `auto`. |
 | `output-dir` | no | `_site` | Folder the generated site is written to. |
 | `title` | no | `Map` | Page title (`MAP_CONFIG.title` and the document `<title>`). |
 | `logo` | no | — | Logo — a URL, or a repo file (copied in). Sets `MAP_CONFIG.logo`. See [Referencing repo files](#referencing-files-from-your-repo). |
@@ -118,19 +120,29 @@ with:
 > NPC search is opt-in: without `npc-url`, NPCs simply aren't searchable (room-id search still
 > works). The bundle ships no default endpoints, so your site never points at someone else's data.
 
-## What gets generated
+## Loading modes
+
+`mode` controls how map data reaches the browser:
+
+- **`prebuilt`** — the `.dat` is decoded **once, offline** (`MudletMapReader.export()` →
+  `{ mapData, colors }`), and the page loads those JSON files via `MAP_CONFIG.mapDataUrl` /
+  `colorsUrl`. Visitors never download the binary decoder, so the page loads faster — but the
+  JSON export can be considerably larger than the source `.dat` on big maps.
+- **`direct`** — the raw `.dat` is copied into the site as-is and loaded via `MAP_CONFIG.mapUrl`;
+  the bundle decodes it in-browser (needs `mudlet-map-browser-script` >= 1.0.0). No build-time
+  decode step, and the `.dat` is typically smaller than its JSON export — at the cost of
+  visitors paying the decode cost themselves. `reader-version` has no effect in this mode.
+- **`auto`** (default) — decodes the `.dat` at build time to count rooms, then picks `direct`
+  once the count exceeds `direct-room-threshold` (default `50000`), else `prebuilt`.
 
 ```
 <output-dir>/
 ├── index.html              # host shell: #root mount, MAP_CONFIG, CDN <script>/<link>
 └── data/
-    ├── mapExport.json      # the .dat's room/area data
-    └── colors.json         # the .dat's environment colours
+    ├── mapExport.json      # prebuilt mode: the .dat's room/area data
+    ├── colors.json         # prebuilt mode: the .dat's environment colours
+    └── map.dat              # direct mode: the raw map, copied through as-is
 ```
-
-The `.dat` is decoded **once, offline** (`MudletMapReader.export()` → `{ mapData, colors }`),
-and the page loads those JSON files via `MAP_CONFIG.mapDataUrl` / `colorsUrl`. Visitors never
-download the binary decoder, so the page loads faster than the in-browser `.dat` path.
 
 ## Version pinning
 

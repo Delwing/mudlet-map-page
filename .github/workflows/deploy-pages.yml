@@ -24,6 +24,14 @@ on:
         required: false
         type: string
         default: "latest"
+      mode:
+        required: false
+        type: string
+        default: "auto"
+      direct-room-threshold:
+        required: false
+        type: string
+        default: "50000"
       title:
         required: false
         type: string
@@ -81,6 +89,8 @@ jobs:
           map-file: ${{ inputs.map-file }}
           version: ${{ inputs.version }}
           reader-version: ${{ inputs.reader-version }}
+          mode: ${{ inputs.mode }}
+          direct-room-threshold: ${{ inputs.direct-room-threshold }}
           output-dir: _site
           title: ${{ inputs.title }}
           logo: ${{ inputs.logo }}
