@@ -84,6 +84,7 @@ Use this when you want the generated site as a folder and control deployment you
 | `credits-github-url` | no | — | Help-modal credits: GitHub URL. |
 | `credits-remark` | no | — | Help-modal credits: remark (HTML allowed). |
 | `extra-config` | no | — | Raw JSON merged into `MAP_CONFIG` last — escape hatch for anything not covered above. |
+| `html-transform` | no | — | Scripts that post-process the generated `index.html`, one path per line — escape hatch for analytics, extra tags, markup rewrites. |
 
 > The reusable workflow exposes the same inputs (`with:`), except `output-dir`, which it
 > fixes to `_site` for the Pages upload.
@@ -119,6 +120,66 @@ with:
 
 > NPC search is opt-in: without `npc-url`, NPCs simply aren't searchable (room-id search still
 > works). The bundle ships no default endpoints, so your site never points at someone else's data.
+
+## Transforming the generated HTML
+
+`extra-config` covers everything that belongs in `MAP_CONFIG`. For the document itself —
+analytics snippets, extra `<meta>`/`<link>` tags, markup rewrites — point `html-transform` at
+one or more scripts in your repo. Each is an ESM module default-exporting a function that
+takes the HTML and returns the HTML:
+
+```yaml
+with:
+  html-transform: scripts/analytics.mjs
+```
+
+```js
+// scripts/analytics.mjs
+const SNIPPET = `
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"><\/script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() { dataLayer.push(arguments); }
+            gtag("js", new Date());
+            gtag("config", "G-XXXXXXX");
+        <\/script>`;
+
+export default function (html, context) {
+    return html.replace("    </head>", `${SNIPPET}\n    </head>`);
+}
+```
+
+List several (one per line) to chain them — each receives the previous one's output. They run
+after the page is assembled and before it is written, so nothing else re-writes your changes.
+
+The second argument carries the build's context, so a script can branch on it or emit side
+files of its own:
+
+| Field | Value |
+|-------|-------|
+| `config` | The assembled `MAP_CONFIG` object. |
+| `outputDir` | The site directory — already populated with `data/` and any copied assets. |
+| `mapFile` | The `map-file` input, as given. |
+| `mode` | The **resolved** mode: `prebuilt` or `direct` (never `auto`). |
+| `roomCount` | Room count, when `auto` mode had to count them; otherwise `undefined`. |
+| `version`, `lang`, `theme`, `title` | The corresponding inputs. |
+
+A script that throws, doesn't default-export a function, or returns a non-string fails the
+build — the page is never written half-transformed.
+
+The generated `<head>` already carries the mobile/PWA tags, so you don't need to add them:
+
+```html
+<meta name="theme-color" content="#0a0a0f" />          <!-- from `theme` -->
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+```
+
+`theme-color` tracks `theme` — `#0a0a0f` for `dark`, `#eef1f5` for `light`, matching the
+bundle's page background so the phone's address bar blends into the page. Browsers honour the
+*first* `theme-color`, so a transform that wants a different one should replace the existing
+tag rather than append a second.
 
 ## Loading modes
 

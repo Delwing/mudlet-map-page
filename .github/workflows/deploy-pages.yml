@@ -67,6 +67,9 @@ on:
       extra-config:
         required: false
         type: string
+      html-transform:
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -84,7 +87,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - uses: Delwing/mudlet-map-page@master
+      # Pinned to the floating major tag, which update-version-tags.yml moves onto each
+      # release commit — so a caller on @v1 gets this workflow AND the action from v1.
+      - uses: Delwing/mudlet-map-page@v1
         with:
           map-file: ${{ inputs.map-file }}
           version: ${{ inputs.version }}
@@ -103,6 +108,7 @@ jobs:
           credits-github-url: ${{ inputs.credits-github-url }}
           credits-remark: ${{ inputs.credits-remark }}
           extra-config: ${{ inputs.extra-config }}
+          html-transform: ${{ inputs.html-transform }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

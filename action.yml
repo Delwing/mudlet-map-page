@@ -67,6 +67,13 @@ inputs:
   extra-config:
     description: "Raw JSON object merged into MAP_CONFIG last (escape hatch for translations, languages, …)."
     required: false
+  html-transform:
+    description: >-
+      Post-process scripts for the generated index.html, one path per line. Each is an ESM
+      module in your checkout that default-exports (html, context) => html; they run in the
+      order listed, each receiving the previous one's output. The escape hatch for anything
+      the inputs above can't express — analytics snippets, extra tags, rewriting markup.
+    required: false
 
 runs:
   using: composite
@@ -95,4 +102,5 @@ runs:
         INPUT_CREDITS_GITHUB_URL: ${{ inputs.credits-github-url }}
         INPUT_CREDITS_REMARK: ${{ inputs.credits-remark }}
         INPUT_EXTRA_CONFIG: ${{ inputs.extra-config }}
+        INPUT_HTML_TRANSFORM: ${{ inputs.html-transform }}
       run: node "$GITHUB_ACTION_PATH/scripts/generate-site.mjs"

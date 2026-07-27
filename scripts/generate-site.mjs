@@ -14,6 +14,7 @@
 // site at the same relative path and referenced there; a URL is used verbatim.
 import {readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync, cpSync} from "node:fs";
 import {resolve, join, dirname, basename} from "node:path";
+import {pathToFileURL} from "node:url";
 
 const input = (name, def = "") => {
     const v = process.env[`INPUT_${name}`];
@@ -39,6 +40,7 @@ const creditsAuthor = input("CREDITS_AUTHOR");
 const creditsGithubUrl = input("CREDITS_GITHUB_URL");
 const creditsRemark = input("CREDITS_REMARK");
 const extraConfig = input("EXTRA_CONFIG");
+const htmlTransform = input("HTML_TRANSFORM");
 
 const URL_RE = /^(https?:)?\/\//i;
 const isUrl = (s) => URL_RE.test(s) || s.startsWith("data:");
@@ -160,11 +162,20 @@ const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;
 // `</script>` inside the inlined JSON would close the tag early — neutralise `<`.
 const configJson = JSON.stringify(config, null, 4).replace(/</g, "\\u003c");
 
-const html = `<!DOCTYPE html>
+// Browser-chrome tint: the bundle's --page-bg for the chosen theme, so the phone's
+// address/status bar blends into the page instead of showing a default light bar.
+const THEME_COLORS = {dark: "#0a0a0f", light: "#eef1f5"};
+const themeColor = THEME_COLORS[theme] ?? THEME_COLORS.dark;
+
+let html = `<!DOCTYPE html>
 <html lang="${escapeHtml(lang)}" data-bs-theme="${escapeHtml(theme)}">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        <meta name="theme-color" content="${escapeHtml(themeColor)}" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <title>${escapeHtml(title || "Map")}</title>
         <link rel="stylesheet" href="${base}/index.min.css" />${faviconHref ? `\n        <link rel="shortcut icon" type="image/x-icon" href="${escapeHtml(faviconHref)}" />` : ""}
         <style>
@@ -182,6 +193,23 @@ const html = `<!DOCTYPE html>
     </body>
 </html>
 `;
+
+// --- 4. Hand the page to the caller's transform scripts, in listed order. Each is an ESM
+// module in the caller's checkout default-exporting (html, context) => html — the escape
+// hatch for anything the inputs above can't express (analytics snippets, extra tags,
+// rewriting markup). `context.outputDir` lets a script emit or read side files too.
+for (const rel of htmlTransform.split(/[\n,]/).map((s) => s.trim()).filter(Boolean)) {
+    const path = resolve(rel);
+    if (!existsSync(path)) throw new Error(`html-transform script not found in the checkout: ${rel}`);
+    const mod = await import(pathToFileURL(path).href);
+    const fn = mod.default;
+    if (typeof fn !== "function") throw new Error(`html-transform script "${rel}" must default-export a function, got ${typeof fn}.`);
+    const out = await fn(html, {config, outputDir, mapFile, mode, version, lang, theme, title, roomCount});
+    if (typeof out !== "string") throw new Error(`html-transform script "${rel}" must return the HTML string, got ${typeof out}.`);
+    html = out;
+    console.log(`mudlet-map-page: applied html-transform ${rel}.`);
+}
+
 writeFileSync(join(outputDir, "index.html"), html);
 
 console.log(`Generated ${outputDir}/ from ${mapFile} (bundle @${version}, ${mode} mode).`);
